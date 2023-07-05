@@ -35,6 +35,7 @@ SCREEN_QUAD_INDICES := [6]u16 {
 }
 
 vao: webgl.VertexArrayObject
+screen_res: glsl.vec2 = { 500, 500 }
 
 
 create_texture2d :: proc(image_bytes: []u8) -> (tex: webgl.Texture, ok: bool) {
@@ -76,8 +77,8 @@ create_texture2d :: proc(image_bytes: []u8) -> (tex: webgl.Texture, ok: bool) {
     webgl.BindTexture(webgl.TEXTURE_2D, tex)
     defer webgl.BindTexture(webgl.TEXTURE_2D, 0)
 
-    webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_WRAP_S, i32(webgl.CLAMP_TO_EDGE))
-    webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_WRAP_T, i32(webgl.CLAMP_TO_EDGE))
+    webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_WRAP_S, i32(webgl.REPEAT))
+    webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_WRAP_T, i32(webgl.REPEAT))
     webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_MIN_FILTER, i32(webgl.NEAREST))
     webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_MAG_FILTER, i32(webgl.NEAREST))
     
@@ -121,9 +122,9 @@ main :: proc() {
     fmt.println("loaded color map")
 
 
-
     terrain_shader, ts_ok := webgl.CreateProgramFromStrings({ SCREEN_QUAD_VERT_SRC },
                                                             { TERRAIN_FRAG_SRC })
+    webgl.UseProgram(terrain_shader)
     if !ts_ok {
         fmt.eprintln("failed to compile terrain shader")
         return
@@ -132,10 +133,19 @@ main :: proc() {
     webgl.BindAttribLocation(terrain_shader, 1, "uv")
 
     height_location := webgl.GetUniformLocation(terrain_shader, "u_height_map")
+    color_location := webgl.GetUniformLocation(terrain_shader, "u_color_map")
+    screen_res_location := webgl.GetUniformLocation(terrain_shader, "u_screen_resolution")
+
     webgl.ActiveTexture(webgl.TEXTURE0)
-    webgl.BindTexture(webgl.TEXTURE_2D, color_tex)
+    webgl.BindTexture(webgl.TEXTURE_2D, height_tex)
     webgl.Uniform1i(height_location, 0)
     
+    webgl.ActiveTexture(webgl.TEXTURE1)
+    webgl.BindTexture(webgl.TEXTURE_2D, color_tex)
+    webgl.Uniform1i(color_location, 1)
+
+    webgl.Uniform2f(screen_res_location, screen_res.x, screen_res.y)
+
 
 
     vert_buff := webgl.CreateBuffer()
@@ -148,8 +158,6 @@ main :: proc() {
     webgl.BufferData(webgl.ELEMENT_ARRAY_BUFFER, size_of(SCREEN_QUAD_INDICES),
                      &SCREEN_QUAD_INDICES, webgl.STATIC_DRAW)
 
-    
-
     vao = webgl.CreateVertexArray()
     webgl.BindVertexArray(vao)
     
@@ -159,7 +167,7 @@ main :: proc() {
     webgl.EnableVertexAttribArray(0)
     webgl.EnableVertexAttribArray(1)
     webgl.VertexAttribPointer(0, 3, webgl.FLOAT, false, size_of(Screen_Quad_Vert), 0)
-    webgl.VertexAttribPointer(1, 2, webgl.FLOAT, false, size_of(Screen_Quad_Vert), size_of(glsl.vec3))
+    webgl.VertexAttribPointer(1, 2, webgl.FLOAT, false, size_of(Screen_Quad_Vert), size_of(glsl.vec2))
 
     webgl.UseProgram(terrain_shader)
 
