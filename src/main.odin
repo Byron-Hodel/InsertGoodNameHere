@@ -7,7 +7,9 @@ import img "core:image"
 import "core:image/png"
 import "core:runtime"
 import "core:mem"
+
 import "allocators"
+import "events"
 
 import webgl "vendor:wasm/WebGL"
 import "vendor:wasm/js"
@@ -79,8 +81,8 @@ create_texture2d :: proc(image_bytes: []u8) -> (tex: webgl.Texture, ok: bool) {
 
     webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_WRAP_S, i32(webgl.REPEAT))
     webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_WRAP_T, i32(webgl.REPEAT))
-    webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_MIN_FILTER, i32(webgl.NEAREST))
-    webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_MAG_FILTER, i32(webgl.NEAREST))
+    webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_MIN_FILTER, i32(webgl.LINEAR))
+    webgl.TexParameteri(webgl.TEXTURE_2D, webgl.TEXTURE_MAG_FILTER, i32(webgl.LINEAR))
     
     webgl.TexImage2D(webgl.TEXTURE_2D, 0, internal_img_fmt,
                      i32(loaded_image.width), i32(loaded_image.height),
@@ -105,6 +107,11 @@ main :: proc() {
     }
     
     context.allocator = general_allocator
+
+    events_ok := events.init();
+    if !events_ok {
+        fmt.println("failed to init events")
+    }
 
     webgl.SetCurrentContextById("render-area")
 
@@ -182,4 +189,8 @@ main :: proc() {
 // however, that would end terribly
 @export
 step :: proc(delta_time: f32) {
+    for events.event_queue_len > 0 {
+        event := events.next()
+        fmt.println("Event!")
+    }
 }
