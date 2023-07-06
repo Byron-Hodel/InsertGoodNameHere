@@ -288,11 +288,6 @@ general_allocator_proc :: proc(
 
     switch mode {
     case .Alloc, .Alloc_Non_Zeroed:
-        //fmt.println("Alloc Called")
-        //fmt.println("    Size:          ", size)
-        //fmt.println("    Total Used:    ", general.total_used)
-        //fmt.println("    Total Free:    ", general.total_size - general.total_used)
-        //fmt.println("    Free List Cnt: ", general.free_list_count)
         data, err := general_alloc(general, size, alignment)
         if err != nil {
             return nil, err
@@ -302,17 +297,10 @@ general_allocator_proc :: proc(
         }
         return data, nil
 	case .Free:
-        //fmt.println("Free Called")
         general_free(general, old_mem, old_size)
 	case .Free_All:
-        // TODO: Impliment this functionality
         panic("Free All Not Implimented Yet!!!")
 	case .Resize:
-        //fmt.println("Resize Called")
-        //fmt.println("    Size:          ", size)
-        //fmt.println("    Total Used:    ", general.total_used)
-        //fmt.println("    Total Free:    ", general.total_size - general.total_used)
-        //fmt.println("    Free List Cnt: ", general.free_list_count)
         return general_resize(general, old_mem, old_size, size, alignment)
 	case .Query_Features:
         set := (^mem.Allocator_Mode_Set)(old_mem)
