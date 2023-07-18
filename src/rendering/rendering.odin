@@ -234,6 +234,10 @@ graphics_pipeline_set_uniform2f :: proc(location: i32, v0, v1: f32) {
     webgl.Uniform2f(location, v0, v1)
 }
 
+graphics_pipeline_set_uniform1i :: proc(location: i32, v: i32) {
+    webgl.Uniform1i(location, v)
+}
+
 graphics_pipeline_set_uniform_mat4 :: proc(location: i32, mat: glsl.mat4) {
     webgl.UniformMatrix4fv(location, mat)
 }
@@ -289,13 +293,15 @@ create_texture2d :: proc(img: ^image.Image) -> Texture2D {
 
 // TODO: create destroy texture proc
 
-texture2d_bind :: proc(tex: Texture2D, tex_coord: int) {
-    webgl.ActiveTexture(webgl.TEXTURE0 + cast(webgl.Enum)tex_coord)
+texture2d_bind :: proc(tex: Texture2D, tex_coord: i32) {
+    gl_coord: i32 = i32(webgl.TEXTURE0) + tex_coord
+    webgl.ActiveTexture(cast(webgl.Enum)gl_coord)
     webgl.BindTexture(webgl.TEXTURE_2D, cast(webgl.Texture)tex)
 }
 
-texture2d_unbind :: proc(tex: Texture2D, tex_coord: int) {
-    webgl.ActiveTexture(webgl.TEXTURE0 + cast(webgl.Enum)tex_coord)
+texture2d_unbind :: proc(tex: Texture2D, tex_coord: i32) {
+    gl_coord: i32 = i32(webgl.TEXTURE0) + tex_coord
+    webgl.ActiveTexture(cast(webgl.Enum)gl_coord)
     webgl.BindTexture(webgl.TEXTURE_2D, 0)
 }
 

@@ -38,6 +38,8 @@ App_State :: struct {
     //ts_screen_res_loc: i32,
     ts_inverse_view_loc: i32, 
     ts_inverse_proj_loc: i32, 
+    ts_height_loc: i32, 
+    ts_color_loc: i32, 
 
     height_tex: rend.Texture2D,
     color_tex: rend.Texture2D,
@@ -84,12 +86,12 @@ SCREEN_RES :: glsl.vec2 { 900, 900 }
 SCREEN_QUAD_VERT_SRC :: #load("../resources/shaders/screen_quad.vert", string)
 TERRAIN_FRAG_SRC :: #load("../resources/shaders/terrain.frag", string)
 
-MAP_HEIGHT_PNG :: #load("../resources/images/D1.png")
-MAP_COLOR_PNG :: #load("../resources/images/C1W.png")
+MAP_HEIGHT_PNG :: #load("../resources/images/D1.png", []u8)
+MAP_COLOR_PNG :: #load("../resources/images/C1W.png", []u8)
 
 app_init :: proc(app_state: ^App_State) -> bool {
-    height_img, height_err := image.load_from_bytes(MAP_HEIGHT_PNG)
-    color_img, color_err := image.load_from_bytes(MAP_COLOR_PNG)
+    height_img, height_err := png.load_from_bytes(MAP_HEIGHT_PNG)
+    color_img, color_err := png.load_from_bytes(MAP_COLOR_PNG)
     defer image.destroy(height_img)
     defer image.destroy(color_img)
 
@@ -116,10 +118,14 @@ app_init :: proc(app_state: ^App_State) -> bool {
                                                                               "u_inverse_view")
     app_state.ts_inverse_proj_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader,
                                                                               "u_inverse_proj")
+    app_state.ts_height_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader, "u_height_map")
+    app_state.ts_color_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader, "u_color_map")
 
     //fmt.println("scr res loc: ", app_state.ts_screen_res_loc)
     fmt.println("inv view loc: ", app_state.ts_inverse_view_loc)
     fmt.println("inv proj loc: ", app_state.ts_inverse_proj_loc)
+    fmt.println("height loc: ", app_state.ts_height_loc)
+    fmt.println("color loc: ", app_state.ts_color_loc)
 
     app_state.terrain_shader = terrain_shader
     app_state.screen_quad_vert_buff = rend.vertex_buffer_create(len(SCREEN_QUAD_VERTS) * size_of(Screen_Quad_Vert),
@@ -129,7 +135,7 @@ app_init :: proc(app_state: ^App_State) -> bool {
                                                                 raw_data(SCREEN_QUAD_INDICES), .Static)
 
     app_state.cam_mode = .Free
-    app_state.cam.speed = 20
+    app_state.cam.speed = 100
     app_state.cam.pos = glsl.vec3 { 0, 100, 0 }
     app_state.cam.x_dir = glsl.vec3 { 1, 0, 0 }
     app_state.cam.y_dir = glsl.vec3 { 0, 1, 0 }
@@ -190,8 +196,10 @@ app_tick :: proc(app_state: ^App_State, delta_time: f32) {
 app_draw :: proc(app_state: ^App_State) {
     rend.texture2d_bind(app_state.height_tex, 0)
     defer rend.texture2d_unbind(app_state.height_tex, 0)
-    rend.texture2d_bind(app_state.color_tex, 0)
-    defer rend.texture2d_unbind(app_state.color_tex, 0)
+    rend.texture2d_bind(app_state.color_tex, 1)
+    defer rend.texture2d_unbind(app_state.color_tex, 1)
+    rend.graphics_pipeline_set_uniform1i(app_state.ts_height_loc, 0)
+    rend.graphics_pipeline_set_uniform1i(app_state.ts_color_loc, 1)
 
     rend.buffer_bind(app_state.screen_quad_vert_buff)
     defer rend.buffer_unbind(app_state.screen_quad_vert_buff)
