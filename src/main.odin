@@ -9,7 +9,6 @@ import "core:runtime"
 import "core:mem"
 
 import "allocators"
-import "events"
 import rend "rendering"
 
 import webgl "vendor:wasm/WebGL"
@@ -34,7 +33,7 @@ main :: proc() {
     
     context.allocator = general_allocator
 
-    events_ok := events.init()
+    events_ok := events_init()
     if !events_ok {
         fmt.println("failed to init events")
         return
@@ -54,16 +53,16 @@ main :: proc() {
 // however, that would end terribly
 @export
 step :: proc(delta_time: f32) {
-    for events.event_queue_len > 0 {
-        event := events.next()
+    for event_queue_len > 0 {
+        event := next_event()
         #partial switch e in event {
-        case events.Key_Event:
+        case Key_Event:
             //fmt.println("Key Event: ", e.new_state, e.id)
-        case events.Mouse_Button_Event:
+        case Mouse_Button_Event:
             //fmt.println("Mouse Event: ", e.new_state, e.id)
         }
     }
-    events.update_key_states()
+    update_key_states()
     app_tick(&app_state, delta_time)
     app_draw(&app_state)
 }

@@ -1,4 +1,4 @@
-package events
+package main
 
 import "vendor:wasm/js"
 import "core:fmt"
@@ -84,7 +84,7 @@ event_queue_beginning: u32 = 0
 
 key_states: [Key_Id]Key_State
 
-init :: proc() -> (result: bool) {
+events_init :: proc() -> (result: bool) {
     result = js.add_window_event_listener(.Key_Up, nil, on_js_event, false)
     result = js.add_window_event_listener(.Key_Down, nil, on_js_event, false)
     result |= js.add_event_listener("render-area", .Mouse_Down, nil, on_js_event, false) 
@@ -95,7 +95,7 @@ init :: proc() -> (result: bool) {
     return
 }
 
-deinit :: proc() {
+events_deinit :: proc() {
     js.remove_window_event_listener(.Key_Up, nil, on_js_event)
     js.remove_window_event_listener(.Key_Down, nil, on_js_event)
     js.remove_event_listener("render-area", .Mouse_Down, nil, on_js_event)
@@ -105,7 +105,7 @@ deinit :: proc() {
     js.remove_event_listener("render-area", .Mouse_Move, nil, on_js_event)
 }
 
-enqueue :: proc(event: Event) {
+enqueue_event :: proc(event: Event) {
     index: u32 = (event_queue_len + event_queue_beginning) % EVENT_QUEUE_CAPACITY
     event_queue_len += 1
     if(event_queue_len > EVENT_QUEUE_CAPACITY) {
@@ -114,7 +114,7 @@ enqueue :: proc(event: Event) {
     event_queue[index] = event
 }
 
-next :: proc() -> Event {
+next_event :: proc() -> Event {
     if(event_queue_len == 0) {
         return nil
     }
@@ -133,7 +133,7 @@ update_key_states :: proc() {
     }
 }
 
-@(private)
+@(private="file")
 on_js_event :: proc(js_event: js.Event) {
     #partial switch js_event.kind {
     case .Key_Press, .Wheel, .Context_Menu:
@@ -176,12 +176,12 @@ on_js_event :: proc(js_event: js.Event) {
     case:
         event = nil
     }
-    enqueue(event)
+    enqueue_event(event)
 }
 
 // Why Strings, Why
 // Why are non-string KeyCodes depricated
-@(private)
+@(private="file")
 translate_js_key_code :: proc(code: string) -> Key_Id {
     switch code {
     case "KeyA":
@@ -271,7 +271,7 @@ translate_js_key_code :: proc(code: string) -> Key_Id {
     }
 }
 
-@(private)
+@(private="file")
 translate_js_mouse_button :: proc(btn: i16) -> Mouse_Button_Id {
     switch btn {
     case 0:

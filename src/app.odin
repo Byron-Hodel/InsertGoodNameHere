@@ -5,7 +5,6 @@ import "core:math/linalg/glsl"
 import "core:image"
 import "core:image/png"
 
-import "events"
 import rend "rendering"
 import webgl "vendor:wasm/WebGL"
 
@@ -159,22 +158,22 @@ app_tick :: proc(app_state: ^App_State, delta_time: f32) {
         y_dir := app_state.cam.y_dir
         z_dir := app_state.cam.z_dir
         local_movement := glsl.vec3 { 0, 0, 0 }
-        if events.key_states[.W] == .Pressed || events.key_states[.W] == .Held {
+        if key_states[.W] == .Pressed || key_states[.W] == .Held {
             local_movement[2] += 1
         }
-        if events.key_states[.A] == .Pressed || events.key_states[.A] == .Held {
+        if key_states[.A] == .Pressed || key_states[.A] == .Held {
             local_movement[0] -= 1
         }
-        if events.key_states[.S] == .Pressed || events.key_states[.S] == .Held {
+        if key_states[.S] == .Pressed || key_states[.S] == .Held {
             local_movement[2] -= 1
         }
-        if events.key_states[.D] == .Pressed || events.key_states[.D] == .Held {
+        if key_states[.D] == .Pressed || key_states[.D] == .Held {
             local_movement[0] += 1
         }
-        if events.key_states[.Space] == .Pressed || events.key_states[.Space] == .Held {
+        if key_states[.Space] == .Pressed || key_states[.Space] == .Held {
             local_movement[1] += 1
         }
-        if events.key_states[.Shift_L] == .Pressed || events.key_states[.Shift_L] == .Held {
+        if key_states[.Shift_L] == .Pressed || key_states[.Shift_L] == .Held {
             local_movement[1] -= 1
         }
         if glsl.length(local_movement) > 0 {
