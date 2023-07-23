@@ -18,7 +18,7 @@ vao: webgl.VertexArrayObject
 screen_res: glsl.vec2 = { 500, 500 }
 
 general_allocator_data: allocators.General_Allocator_Data
-app_state: App_State
+scene_layer: Scene_Layer
 
 main :: proc() {
     fmt.println("program start!")
@@ -45,7 +45,7 @@ main :: proc() {
         return
     }
 
-    app_init(&app_state)
+    scene_layer_init(&scene_layer)
 }
 
 // the update loop.
@@ -63,6 +63,6 @@ step :: proc(delta_time: f32) {
         }
     }
     update_key_states()
-    app_tick(&app_state, delta_time)
-    app_draw(&app_state)
+    scene_layer_tick(&scene_layer, delta_time)
+    scene_layer_draw(&scene_layer)
 }

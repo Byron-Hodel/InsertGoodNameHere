@@ -30,7 +30,7 @@ Camera_Mode :: enum {
     Orbital,
 }
 
-App_State :: struct {
+Scene_Layer :: struct {
     screen_quad_vert_buff: rend.Vertex_Buffer,
     screen_quad_index_buff: rend.Index_Buffer,
     terrain_shader: rend.Graphics_Pipeline,
@@ -88,14 +88,14 @@ TERRAIN_FRAG_SRC :: #load("../resources/shaders/terrain.frag", string)
 MAP_HEIGHT_PNG :: #load("../resources/images/D1.png", []u8)
 MAP_COLOR_PNG :: #load("../resources/images/C1W.png", []u8)
 
-app_init :: proc(app_state: ^App_State) -> bool {
+scene_layer_init :: proc(layer: ^Scene_Layer) -> bool {
     height_img, height_err := png.load_from_bytes(MAP_HEIGHT_PNG)
     color_img, color_err := png.load_from_bytes(MAP_COLOR_PNG)
     defer image.destroy(height_img)
     defer image.destroy(color_img)
 
-    app_state.height_tex = rend.create_texture2d(height_img)
-    app_state.color_tex = rend.create_texture2d(color_img)
+    layer.height_tex = rend.create_texture2d(height_img)
+    layer.color_tex = rend.create_texture2d(color_img)
 
     if height_err != nil {
         fmt.eprintln("Failed To Load Height Map: ", height_err)
@@ -111,52 +111,52 @@ app_init :: proc(app_state: ^App_State) -> bool {
         return false
     }
 
-    //app_state.ts_screen_res_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader,
+    //layer.ts_screen_res_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader,
     //                                                                          "u_screen_resolution")
-    app_state.ts_inverse_view_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader,
+    layer.ts_inverse_view_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader,
                                                                               "u_inverse_view")
-    app_state.ts_inverse_proj_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader,
+    layer.ts_inverse_proj_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader,
                                                                               "u_inverse_proj")
-    app_state.ts_height_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader, "u_height_map")
-    app_state.ts_color_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader, "u_color_map")
+    layer.ts_height_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader, "u_height_map")
+    layer.ts_color_loc = rend.graphics_pipeline_get_uniform_location(terrain_shader, "u_color_map")
 
-    //fmt.println("scr res loc: ", app_state.ts_screen_res_loc)
-    fmt.println("inv view loc: ", app_state.ts_inverse_view_loc)
-    fmt.println("inv proj loc: ", app_state.ts_inverse_proj_loc)
-    fmt.println("height loc: ", app_state.ts_height_loc)
-    fmt.println("color loc: ", app_state.ts_color_loc)
+    //fmt.println("scr res loc: ", layer.ts_screen_res_loc)
+    fmt.println("inv view loc: ", layer.ts_inverse_view_loc)
+    fmt.println("inv proj loc: ", layer.ts_inverse_proj_loc)
+    fmt.println("height loc: ", layer.ts_height_loc)
+    fmt.println("color loc: ", layer.ts_color_loc)
 
-    app_state.terrain_shader = terrain_shader
-    app_state.screen_quad_vert_buff = rend.vertex_buffer_create(len(SCREEN_QUAD_VERTS) * size_of(Screen_Quad_Vert),
+    layer.terrain_shader = terrain_shader
+    layer.screen_quad_vert_buff = rend.vertex_buffer_create(len(SCREEN_QUAD_VERTS) * size_of(Screen_Quad_Vert),
                                                                 raw_data(SCREEN_QUAD_VERTS),
                                                                 SCREEN_QUAD_VERT_ATTRIBUTES, .Static)
-    app_state.screen_quad_index_buff = rend.index_buffer_create(len(SCREEN_QUAD_INDICES), .U16,
+    layer.screen_quad_index_buff = rend.index_buffer_create(len(SCREEN_QUAD_INDICES), .U16,
                                                                 raw_data(SCREEN_QUAD_INDICES), .Static)
 
-    app_state.cam_mode = .Free
-    app_state.cam.speed = 100
-    app_state.cam.pos = glsl.vec3 { 0, 100, 0 }
-    app_state.cam.x_dir = glsl.vec3 { 1, 0, 0 }
-    app_state.cam.y_dir = glsl.vec3 { 0, 1, 0 }
-    app_state.cam.z_dir = glsl.vec3 { 0, 0, 1 }
+    layer.cam_mode = .Free
+    layer.cam.speed = 100
+    layer.cam.pos = glsl.vec3 { 0, 100, 0 }
+    layer.cam.x_dir = glsl.vec3 { 1, 0, 0 }
+    layer.cam.y_dir = glsl.vec3 { 0, 1, 0 }
+    layer.cam.z_dir = glsl.vec3 { 0, 0, 1 }
 
-    update_camera_matrices()
+    update_camera_matrices(&layer.cam)
 
     return true
 }
 
-app_deinit :: proc() {
-    rend.buffer_destroy(app_state.screen_quad_vert_buff)
-    rend.buffer_destroy(app_state.screen_quad_index_buff)
-    rend.graphics_pipeling_destroy(app_state.terrain_shader)
+scene_layer_deinit :: proc(layer: ^Scene_Layer) {
+    rend.buffer_destroy(layer.screen_quad_vert_buff)
+    rend.buffer_destroy(layer.screen_quad_index_buff)
+    rend.graphics_pipeling_destroy(layer.terrain_shader)
 }
 
-app_tick :: proc(app_state: ^App_State, delta_time: f32) {
-    switch app_state.cam_mode {
+scene_layer_tick :: proc(layer: ^Scene_Layer, delta_time: f32) {
+    switch layer.cam_mode {
     case .Free:
-        x_dir := app_state.cam.x_dir
-        y_dir := app_state.cam.y_dir
-        z_dir := app_state.cam.z_dir
+        x_dir := layer.cam.x_dir
+        y_dir := layer.cam.y_dir
+        z_dir := layer.cam.z_dir
         local_movement := glsl.vec3 { 0, 0, 0 }
         if key_states[.W] == .Pressed || key_states[.W] == .Held {
             local_movement[2] += 1
@@ -179,12 +179,12 @@ app_tick :: proc(app_state: ^App_State, delta_time: f32) {
         if glsl.length(local_movement) > 0 {
             local_movement = glsl.normalize(local_movement)
         }
-        local_movement *= delta_time * app_state.cam.speed
+        local_movement *= delta_time * layer.cam.speed
         global_movement: glsl.vec3 = local_movement[0] * x_dir +
                                      local_movement[1] * y_dir +
                                      local_movement[2] * -z_dir
-        app_state.cam.pos += global_movement
-        update_camera_matrices()
+        layer.cam.pos += global_movement
+        update_camera_matrices(&layer.cam)
     case .Orbital:
         
     case:
@@ -192,45 +192,42 @@ app_tick :: proc(app_state: ^App_State, delta_time: f32) {
     }
 }
 
-app_draw :: proc(app_state: ^App_State) {
-    rend.texture2d_bind(app_state.height_tex, 0)
-    defer rend.texture2d_unbind(app_state.height_tex, 0)
-    rend.texture2d_bind(app_state.color_tex, 1)
-    defer rend.texture2d_unbind(app_state.color_tex, 1)
-    rend.graphics_pipeline_set_uniform1i(app_state.ts_height_loc, 0)
-    rend.graphics_pipeline_set_uniform1i(app_state.ts_color_loc, 1)
+scene_layer_draw :: proc(layer: ^Scene_Layer) {
+    rend.texture2d_bind(layer.height_tex, 0)
+    defer rend.texture2d_unbind(layer.height_tex, 0)
+    rend.texture2d_bind(layer.color_tex, 1)
+    defer rend.texture2d_unbind(layer.color_tex, 1)
+    rend.graphics_pipeline_set_uniform1i(layer.ts_height_loc, 0)
+    rend.graphics_pipeline_set_uniform1i(layer.ts_color_loc, 1)
 
-    rend.buffer_bind(app_state.screen_quad_vert_buff)
-    defer rend.buffer_unbind(app_state.screen_quad_vert_buff)
-    rend.buffer_bind(app_state.screen_quad_index_buff)
-    defer rend.buffer_unbind(app_state.screen_quad_index_buff)
+    rend.buffer_bind(layer.screen_quad_vert_buff)
+    defer rend.buffer_unbind(layer.screen_quad_vert_buff)
+    rend.buffer_bind(layer.screen_quad_index_buff)
+    defer rend.buffer_unbind(layer.screen_quad_index_buff)
 
-    rend.graphics_pipeline_bind(app_state.terrain_shader)
-    defer rend.graphics_pipeline_bind(app_state.terrain_shader)
+    rend.graphics_pipeline_bind(layer.terrain_shader)
+    defer rend.graphics_pipeline_bind(layer.terrain_shader)
 
-    rend.graphics_pipeline_set_uniform_mat4(app_state.ts_inverse_view_loc,
-                                            glsl.inverse(app_state.cam.view))
-    rend.graphics_pipeline_set_uniform_mat4(app_state.ts_inverse_proj_loc,
-                                            glsl.inverse(app_state.cam.proj))
-    //rend.graphics_pipeline_set_uniform2f(app_state.ts_screen_res_loc, SCREEN_RES.x, SCREEN_RES.y)
+    rend.graphics_pipeline_set_uniform_mat4(layer.ts_inverse_view_loc,
+                                            glsl.inverse(layer.cam.view))
+    rend.graphics_pipeline_set_uniform_mat4(layer.ts_inverse_proj_loc,
+                                            glsl.inverse(layer.cam.proj))
+    //rend.graphics_pipeline_set_uniform2f(layer.ts_screen_res_loc, SCREEN_RES.x, SCREEN_RES.y)
 
-    rend.draw_indices(len(SCREEN_QUAD_INDICES), 0, app_state.screen_quad_index_buff.index_type)
+    rend.draw_indices(len(SCREEN_QUAD_INDICES), 0, layer.screen_quad_index_buff.index_type)
 }
 
-update_camera_matrices :: proc() {
-    pos := app_state.cam.pos
-    rot := app_state.cam.rot
-    //fmt.println(pos)
+update_camera_matrices :: proc(cam: ^Camera) {
     // TODO: Set Proper Aspect Ratio
     aspect_ratio: f32 = 1
     proj := glsl.mat4PerspectiveInfinite(90.0, aspect_ratio, 0.1)
-    pos_transform := glsl.inverse(glsl.mat4Translate(pos))
-    rotation_transform := glsl.mat4FromQuat(rot)
+    pos_transform := glsl.inverse(glsl.mat4Translate(cam.pos))
+    rotation_transform := glsl.mat4FromQuat(cam.rot)
     view := pos_transform * rotation_transform
     view_proj := view * proj 
 
-    app_state.cam.view = view
-    app_state.cam.proj = proj
-    app_state.cam.view_proj = view_proj
+    cam.view = view
+    cam.proj = proj
+    cam.view_proj = view_proj
 }
 
