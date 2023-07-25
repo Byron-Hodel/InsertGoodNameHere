@@ -19,6 +19,7 @@ screen_res: glsl.vec2 = { 500, 500 }
 
 general_allocator_data: allocators.General_Allocator_Data
 scene_layer: Scene_Layer
+ui_layer: Ui_Layer
 
 main :: proc() {
     fmt.println("program start!")
@@ -35,17 +36,21 @@ main :: proc() {
 
     events_ok := events_init()
     if !events_ok {
-        fmt.println("failed to init events")
-        return
+        panic("failed to init events")
     }
 
     renderer_ok := rend.init("render-area")
     if !renderer_ok {
-        fmt.println("failed to init rendering")
-        return
+        panic("failed to init rendering")
     }
 
-    scene_layer_init(&scene_layer)
+    if !scene_layer_init(&scene_layer) {
+        panic("failed to init scene layer")
+    }
+
+    if !ui_layer_init(&ui_layer) {
+        panic("failed to init scene layer")
+    }
 }
 
 // the update loop.
@@ -55,14 +60,11 @@ main :: proc() {
 step :: proc(delta_time: f32) {
     for event_queue_len > 0 {
         event := next_event()
-        #partial switch e in event {
-        case Key_Event:
-            //fmt.println("Key Event: ", e.new_state, e.id)
-        case Mouse_Button_Event:
-            //fmt.println("Mouse Event: ", e.new_state, e.id)
-        }
+        handled: bool = ui_layer_on_event(&ui_layer, event)
     }
     update_key_states()
     scene_layer_tick(&scene_layer, delta_time)
     scene_layer_draw(&scene_layer)
+
+    ui_layer_draw(&ui_layer)
 }
