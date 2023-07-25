@@ -18,10 +18,16 @@ Index_Buffer :: struct {
     length: int,
 }
 
+Uniform_Buffer :: struct {
+    raw_buffer: Raw_Buffer,
+    size: int,
+}
+
 
 Buffer_Type :: enum webgl.Enum {
     Vertex = webgl.ARRAY_BUFFER,
     Index = webgl.ELEMENT_ARRAY_BUFFER,
+    Uniform = webgl.UNIFORM_BUFFER,
 }
 
 Buffer_Usage :: enum webgl.Enum {
@@ -98,7 +104,7 @@ raw_buffer_unbind :: proc(buffer: Raw_Buffer, type: Buffer_Type) {
 
 vertex_buffer_create :: proc(
     size: int,
-    data: rawptr = nil,
+    data: rawptr,
     attribs: []Vertex_Attribute, 
     usage: Buffer_Usage,
 ) -> Vertex_Buffer {
@@ -149,7 +155,7 @@ vertex_buffer_unbind :: proc(buffer: Vertex_Buffer) {
 index_buffer_create :: proc(
     length: int,
     index_type: Index_Type,
-    data: rawptr = nil,
+    data: rawptr,
     usage: Buffer_Usage,
 ) -> Index_Buffer {
     index_size: int
@@ -198,10 +204,61 @@ index_buffer_unbind :: proc(buffer: Index_Buffer) {
     webgl.BindBuffer(webgl.ELEMENT_ARRAY_BUFFER, 0)
 }
 
-buffer_destroy :: proc{vertex_buffer_destroy, index_buffer_destroy, raw_buffer_destroy}
-buffer_bind :: proc {vertex_buffer_bind, index_buffer_bind, raw_buffer_bind}
-buffer_set_data :: proc {vertex_buffer_set_data, index_buffer_set_data, raw_buffer_set_data}
-buffer_unbind:: proc {vertex_buffer_unbind, index_buffer_unbind, raw_buffer_unbind}
+uniform_buffer_create :: proc(
+    size: int,
+    data: rawptr,
+    usage: Buffer_Usage,
+) -> Uniform_Buffer {
+    return Uniform_Buffer {
+        raw_buffer = raw_buffer_create(size, .Uniform, data, usage),
+        size = size,
+    }
+}
+
+uniform_buffer_destroy :: proc(buffer: Uniform_Buffer) {
+    raw_buffer_destroy(buffer.raw_buffer)
+}
+
+uniform_buffer_bind :: proc(buffer: Uniform_Buffer, binding: i32) {
+    webgl.BindBufferBase(webgl.UNIFORM_BUFFER, binding, buffer.raw_buffer)
+}
+
+uniform_buffer_unbind :: proc(buffer: Uniform_Buffer, binding: i32) {
+    webgl.BindBufferBase(webgl.UNIFORM_BUFFER, 0, buffer.raw_buffer)
+}
+
+uniform_buffer_set_data :: proc(buffer: Uniform_Buffer, size: int, data: rawptr, offset: uintptr) {
+    raw_buffer_set_data(buffer.raw_buffer, .Uniform, size, data, offset)
+}
+
+buffer_destroy :: proc {
+    vertex_buffer_destroy,
+    index_buffer_destroy,
+    uniform_buffer_destroy,
+    raw_buffer_destroy,
+}
+
+buffer_bind :: proc {
+    vertex_buffer_bind,
+    index_buffer_bind,
+    uniform_buffer_bind,
+    raw_buffer_bind,
+}
+
+buffer_unbind:: proc {
+    vertex_buffer_unbind,
+    index_buffer_unbind,
+    uniform_buffer_unbind,
+    raw_buffer_unbind,
+}
+
+buffer_set_data :: proc {
+    vertex_buffer_set_data,
+    index_buffer_set_data,
+    uniform_buffer_set_data,
+    raw_buffer_set_data,
+}
+
 
 graphics_pipeline_create :: proc(
     vert_src: string,
@@ -226,6 +283,10 @@ graphics_pipeling_destroy :: proc(pipeline: Graphics_Pipeline) {
     webgl.DeleteProgram(pipeline.program)
 }
 
+graphics_pipeline_get_ubuffer_location :: proc(pipeline: Graphics_Pipeline, name: string) -> i32 {
+    return webgl.GetUniformBlockIndex(pipeline.program, name)
+}
+
 graphics_pipeline_get_uniform_location :: proc(pipeline: Graphics_Pipeline, name: string) -> i32 {
     return webgl.GetUniformLocation(pipeline.program, name)
 }
@@ -240,10 +301,6 @@ graphics_pipeline_set_uniform1i :: proc(location: i32, v: i32) {
 
 graphics_pipeline_set_uniform_mat4 :: proc(location: i32, mat: glsl.mat4) {
     webgl.UniformMatrix4fv(location, mat)
-}
-
-draw_indices :: proc(count: int, offset: uintptr, index_type: Index_Type) {
-    webgl.DrawElements(webgl.TRIANGLES, count, cast(webgl.Enum)index_type, rawptr(offset))
 }
 
 graphics_pipeline_bind :: proc(pipeline: Graphics_Pipeline) {
@@ -305,3 +362,13 @@ texture2d_unbind :: proc(tex: Texture2D, tex_coord: i32) {
     webgl.BindTexture(webgl.TEXTURE_2D, 0)
 }
 
+
+draw_indices :: proc(count: int, offset: uintptr, index_type: Index_Type) {
+    webgl.DrawElements(webgl.TRIANGLES, count, cast(webgl.Enum)index_type, rawptr(offset))
+}
+
+draw_indices_instanced :: proc(count: int, offset: int, index_type: Index_Type, instances: int) {
+    webgl.DrawElementsInstanced(webgl.TRIANGLES, count,
+                                cast(webgl.Enum)index_type,
+                                offset, instances)
+}
