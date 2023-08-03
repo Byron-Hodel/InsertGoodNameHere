@@ -223,7 +223,7 @@ general_resize :: proc(
     old_mem: rawptr,
     old_size: int,
     size: int,
-    alignment: int
+    alignment: int,
 ) -> ([]byte, Allocator_Error) {
     // TODO: Impliment proper resizing
     new_mem, err := general_alloc(general, size, alignment)
@@ -238,7 +238,7 @@ general_resize :: proc(
 
 general_coalesce :: proc(
     general: ^General_Allocator_Data,
-    free_node: ^Free_List_Node
+    free_node: ^Free_List_Node,
 ) {
     next := free_node.next
     if next != nil {
