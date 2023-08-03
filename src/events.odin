@@ -27,6 +27,11 @@ Key_Id :: enum u8 {
     Alt_L,
     Alt_R,
 
+    Left,
+    Right,
+    Up,
+    Down,
+
     Escape,
     // TODO: Add More Key Ids
 }
@@ -258,6 +263,14 @@ translate_js_key_code :: proc(code: string) -> Key_Id {
         return .Ctrl_L
     case "ControlRight":
         return .Ctrl_R
+    case "ArrowLeft":
+        return .Left
+    case "ArrowRight":
+        return .Right
+    case "ArrowUp":
+        return .Up
+    case "ArrowDown":
+        return .Down
     case "Escape":
         return .Escape
     case:
