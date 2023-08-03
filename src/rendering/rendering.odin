@@ -30,7 +30,7 @@ Buffer_Type :: enum webgl.Enum {
     Uniform = webgl.UNIFORM_BUFFER,
 }
 
-Buffer_Usage :: enum webgl.Enum {
+Usage :: enum webgl.Enum {
     Static = webgl.STATIC_DRAW,
     Dynamic = webgl.DYNAMIC_DRAW,
 }
@@ -73,12 +73,12 @@ raw_buffer_create :: proc(
     size: int,
     type: Buffer_Type,
     data: rawptr = nil,
-    usage: Buffer_Usage,
+    usage: Usage,
 ) -> Raw_Buffer {
     wgl_buffer := webgl.CreateBuffer()
     buffer := Raw_Buffer(wgl_buffer)
-    raw_buffer_bind(buffer, type)
-    defer raw_buffer_unbind(buffer, type)
+    bind(buffer, type)
+    defer unbind(buffer, type)
     webgl.BufferData(cast(webgl.Enum)type, size, data, cast(webgl.Enum)usage)
     return buffer
 }
@@ -88,8 +88,8 @@ raw_buffer_destroy :: proc(buffer: Raw_Buffer) {
 }
 
 raw_buffer_set_data :: proc(buffer: Raw_Buffer, type: Buffer_Type, size: int, data: rawptr, offset: uintptr) {
-    raw_buffer_bind(buffer, type)
-    defer raw_buffer_unbind(buffer, type)
+    bind(buffer, type)
+    defer unbind(buffer, type)
     webgl.BufferSubData(cast(webgl.Enum)type, offset, size, data)
 }
 
@@ -106,15 +106,15 @@ vertex_buffer_create :: proc(
     size: int,
     data: rawptr,
     attribs: []Vertex_Attribute, 
-    usage: Buffer_Usage,
+    usage: Usage,
 ) -> Vertex_Buffer {
 
     raw_buffer := raw_buffer_create(size, .Vertex, data, usage)
     vao := webgl.CreateVertexArray()
     webgl.BindVertexArray(vao)
 
-    buffer_bind(raw_buffer, Buffer_Type.Vertex)
-    defer buffer_unbind(raw_buffer, Buffer_Type.Vertex)
+    bind(raw_buffer, Buffer_Type.Vertex)
+    defer unbind(raw_buffer, Buffer_Type.Vertex)
 
     for a in attribs {
         webgl.EnableVertexAttribArray(i32(a.location))
@@ -136,6 +136,7 @@ vertex_buffer_create :: proc(
 
 vertex_buffer_destroy :: proc(buffer: Vertex_Buffer) {
     raw_buffer_destroy(buffer.raw_buffer)
+    webgl.DeleteVertexArray(buffer.vao)
 }
 
 vertex_buffer_set_data :: proc(buffer: Vertex_Buffer, size: int, data: rawptr, offset: uintptr) {
@@ -143,7 +144,6 @@ vertex_buffer_set_data :: proc(buffer: Vertex_Buffer, size: int, data: rawptr, o
 }
 
 vertex_buffer_bind :: proc(buffer: Vertex_Buffer) {
-    webgl.BindVertexArray(buffer.vao)
     webgl.BindBuffer(webgl.ARRAY_BUFFER, buffer.raw_buffer)
 }
 
@@ -156,7 +156,7 @@ index_buffer_create :: proc(
     length: int,
     index_type: Index_Type,
     data: rawptr,
-    usage: Buffer_Usage,
+    usage: Usage,
 ) -> Index_Buffer {
     index_size: int
     switch index_type {
@@ -172,7 +172,7 @@ index_buffer_create :: proc(
     return Index_Buffer {
         raw_buffer = raw_buffer_create(length * index_size, .Index, data, usage),
         index_type = index_type,
-        length = length * index_size,
+        length = length,
     }
 }
 
@@ -207,7 +207,7 @@ index_buffer_unbind :: proc(buffer: Index_Buffer) {
 uniform_buffer_create :: proc(
     size: int,
     data: rawptr,
-    usage: Buffer_Usage,
+    usage: Usage,
 ) -> Uniform_Buffer {
     return Uniform_Buffer {
         raw_buffer = raw_buffer_create(size, .Uniform, data, usage),
@@ -238,18 +238,22 @@ buffer_destroy :: proc {
     raw_buffer_destroy,
 }
 
-buffer_bind :: proc {
+bind :: proc {
     vertex_buffer_bind,
     index_buffer_bind,
     uniform_buffer_bind,
     raw_buffer_bind,
+    graphics_pipeline_bind,
+    texture2d_bind,
 }
 
-buffer_unbind:: proc {
+unbind:: proc {
     vertex_buffer_unbind,
     index_buffer_unbind,
     uniform_buffer_unbind,
     raw_buffer_unbind,
+    graphics_pipeline_unbind,
+    texture2d_unbind,
 }
 
 buffer_set_data :: proc {
@@ -312,7 +316,7 @@ graphics_pipeline_unbind :: proc(pipeline: Graphics_Pipeline) {
 }
 
 // webgl.BindAttribLocation(program, i32(attrib.location), attrib.name)
-
+import "core:fmt"
 
 create_texture2d :: proc(img: ^image.Image) -> Texture2D {
     internal_img_fmt: webgl.Enum
@@ -329,6 +333,7 @@ create_texture2d :: proc(img: ^image.Image) -> Texture2D {
         return {}
     }
     fmt_type := webgl.UNSIGNED_BYTE
+    fmt.println(internal_img_fmt)
     
     tex := webgl.CreateTexture()
 
@@ -363,12 +368,13 @@ texture2d_unbind :: proc(tex: Texture2D, tex_coord: i32) {
 }
 
 
-draw_indices :: proc(count: int, offset: uintptr, index_type: Index_Type) {
-    webgl.DrawElements(webgl.TRIANGLES, count, cast(webgl.Enum)index_type, rawptr(offset))
-}
-
-draw_indices_instanced :: proc(count: int, offset: int, index_type: Index_Type, instances: int) {
-    webgl.DrawElementsInstanced(webgl.TRIANGLES, count,
-                                cast(webgl.Enum)index_type,
-                                offset, instances)
+draw_indices :: proc(offset: uintptr, vert_buf: Vertex_Buffer, index_buf: Index_Buffer) {
+    webgl.BindVertexArray(vert_buf.vao)
+    defer webgl.BindVertexArray(0)
+    bind(vert_buf)
+    defer unbind(vert_buf)
+    bind(index_buf)
+    defer unbind(index_buf)
+    count := index_buf.length - int(offset)
+    webgl.DrawElements(webgl.TRIANGLES, count, cast(webgl.Enum)index_buf.index_type, rawptr(offset))
 }
