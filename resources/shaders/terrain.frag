@@ -3,7 +3,6 @@
 precision mediump float;
 
 in vec2 tex_coord;
-
 out vec4 col;
 
 uniform vec2 u_screen_resolution;
@@ -16,10 +15,10 @@ uniform sampler2D u_height_map;
 
 #define MAX_DST 2048.0
 #define MAX_ITERATIONS 1024
-#define GRID_SCALE 2048
+#define GRID_SCALE 1024
 
 // uvs go from 0 to one, so scaling by 1024 should make it about the same as 0 to 1024
-#define HEIGHT_SCALE_FACTOR 70.0
+#define HEIGHT_SCALE_FACTOR 128.0
 
 bool in_terrain(vec3 pos) {
     float height = texture(u_height_map, pos.xz).x;
@@ -44,6 +43,9 @@ vec4 ray_march_terrain(vec3 ro, vec3 rd, float grid_scale) {
         vec3 pos = vec3(grid_pos) / grid_scale;
         pos.y *= grid_scale;
         if(in_terrain(pos)) {
+            //col = vec4(i,i,i,0);
+            //col /= float(MAX_ITERATIONS);
+            //col.a = 1.0;
             col = texture(u_color_map, pos.xz);
             return col;
         }
@@ -58,7 +60,8 @@ vec4 ray_march_terrain(vec3 ro, vec3 rd, float grid_scale) {
 void main() {
     vec2 uv = tex_coord.xy * 2.0 - 1.0;
     vec3 ro = (u_inverse_view * vec4(0,0,0,1)).xyz;
-    vec3 rd = normalize((u_inverse_proj * vec4(uv.xy, 0, 1)).xyz);
+    vec3 rd = (u_inverse_proj * vec4(uv.xy, 0, 1)).xyz;
+    rd = normalize((u_inverse_view * vec4(rd.xyz, 0)).xyz);
 
     col = ray_march_terrain(ro, rd, float(GRID_SCALE));
 }
