@@ -57,18 +57,16 @@ Mouse_Button_State :: enum u8 {
 Mouse_Button_Event :: struct {
     new_state: Mouse_Button_State,
     id: Mouse_Button_Id,
+    client_pos: [2]u32,
 }
 
 Mouse_Move_Event :: struct {
-    delta_x: u32,
-    delta_y: u32,
-    client_x: u32,
-    client_y: u32,
+    delta: [2]i32,
+    client_pos: [2]f32,
 }
 
 Mouse_Wheel_Event :: struct {
-    delta_x: f64,
-    delta_y: f64,
+    delta: [2]f32,
 }
 
 Event :: union {
@@ -79,12 +77,10 @@ Event :: union {
 }
 
 // this limit should never be reached
-EVENT_QUEUE_CAPACITY :: 256;
+EVENT_QUEUE_CAPACITY :: 256
 event_queue: [EVENT_QUEUE_CAPACITY]Event
 event_queue_len: u32 = 0
 event_queue_beginning: u32 = 0
-
-key_states: [Key_Id]Key_State
 
 events_init :: proc() -> (result: bool) {
     result = js.add_window_event_listener(.Key_Up, nil, on_js_event, false)
@@ -127,13 +123,6 @@ next_event :: proc() -> Event {
     return event
 }
 
-update_key_states :: proc() {
-    for id in Key_Id {
-        if key_states[id] == .Pressed {
-            key_states[id] = .Held
-        }
-    }
-}
 
 @(private="file")
 on_js_event :: proc(js_event: js.Event) {
@@ -146,16 +135,12 @@ on_js_event :: proc(js_event: js.Event) {
     #partial switch js_event.kind {
     case .Key_Up:
         key_id := translate_js_key_code(js_event.key.code)
-        key_states[key_id] = .Released
         event = Key_Event {
             new_state = .Released,
             id = key_id,
         }
     case .Key_Down:
         key_id := translate_js_key_code(js_event.key.code)
-        if !js_event.key.repeat {
-            key_states[key_id] = .Pressed
-        }
         event = Key_Event {
             new_state = .Pressed if !js_event.key.repeat else .Held,
             id = key_id,
@@ -169,11 +154,16 @@ on_js_event :: proc(js_event: js.Event) {
         event = Mouse_Button_Event {
             new_state = .Released,
             id = translate_js_mouse_button(js_event.mouse.button),
+            client_pos = { u32(js_event.mouse.client[0]), u32(js_event.mouse.client[0]) },
         }
+    case .Mouse_Move: {
+        event = Mouse_Move_Event {
+            delta = { i32(js_event.mouse.movement[0]), i32(js_event.mouse.movement[1]) },
+        }
+    }
     case .Wheel:
         event = Mouse_Wheel_Event {
-            delta_x = js_event.wheel.delta[0],
-            delta_y = js_event.wheel.delta[1],
+            delta = { f32(js_event.wheel.delta[0]), f32(js_event.wheel.delta[1]) },
         }
     case:
         event = nil
