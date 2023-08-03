@@ -1,30 +1,16 @@
 package main
 
-import "core:fmt"
-import "core:os"
 import "core:math/linalg/glsl"
-import img "core:image"
-import "core:image/png"
-import "core:runtime"
-import "core:mem"
 
+import "core:runtime"
 import "allocators"
 import rend "rendering"
-
-import webgl "vendor:wasm/WebGL"
-import "vendor:wasm/js"
-
-vao: webgl.VertexArrayObject
-screen_res: glsl.vec2 = { 500, 500 }
 
 general_allocator_data: allocators.General_Allocator_Data
 scene_layer: Scene_Layer
 ui_layer: Ui_Layer
 
 main :: proc() {
-    fmt.println("program start!")
-
-
     // start general allocator with half a gig
     allocators.general_init(&general_allocator_data, 500000000)
     general_allocator: runtime.Allocator = {
@@ -53,17 +39,35 @@ main :: proc() {
     }
 }
 
+@(private="file")
+scene_layer_key_states: [Key_Id]Key_State
+
 // the update loop.
 // I would use an infinite loop in the main function,
 // however, that would end terribly
 @export
 step :: proc(delta_time: f32) {
+    for k in Key_Id {
+        if scene_layer_key_states[k] == .Pressed {
+            scene_layer_key_states[k] = .Held
+        }
+    }
+    mouse_delta: glsl.vec2
+
     for event_queue_len > 0 {
         event := next_event()
         handled: bool = ui_layer_on_event(&ui_layer, event)
+        if !handled {
+            #partial switch e in event {
+            case Key_Event:
+                scene_layer_key_states[e.id] = e.new_state
+            case Mouse_Move_Event:
+                mouse_delta[0] += f32(e.delta.x)
+                mouse_delta[1] += f32(e.delta.y)
+            }
+        }
     }
-    update_key_states()
-    scene_layer_tick(&scene_layer, delta_time)
+    scene_layer_tick(&scene_layer, scene_layer_key_states, mouse_delta, delta_time)
     scene_layer_draw(&scene_layer)
 
     ui_layer_draw(&ui_layer)
