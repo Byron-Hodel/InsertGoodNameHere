@@ -156,8 +156,20 @@ scene_layer_tick :: proc(
     mouse_delta: glsl.vec2,
     delta_time: f32,
 ) {
-    layer.cam.pitch += mouse_delta.y * delta_time
-    layer.cam.yaw += mouse_delta.x * delta_time
+    //layer.cam.pitch += mouse_delta.y * delta_time
+    //layer.cam.yaw += mouse_delta.x * delta_time
+    if key_states[.Left] == .Pressed || key_states[.Left] == .Held {
+        layer.cam.yaw -= 1 * delta_time
+    }
+    if key_states[.Right] == .Pressed || key_states[.Right] == .Held {
+        layer.cam.yaw += 1 * delta_time
+    }
+    if key_states[.Down] == .Pressed || key_states[.Down] == .Held {
+        layer.cam.pitch -= 1 * delta_time
+    }
+    if key_states[.Up] == .Pressed || key_states[.Up] == .Held {
+        layer.cam.pitch += 1 * delta_time
+    }
 
     yaw_quat: glsl.quat = glsl.quatAxisAngle({0,1,0}, layer.cam.yaw / 2.0)
     forward := rotate(yaw_quat, {0, 0, 1})
