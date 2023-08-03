@@ -171,13 +171,12 @@ scene_layer_tick :: proc(
         layer.cam.pitch += 1 * delta_time
     }
 
-    yaw_quat: glsl.quat = glsl.quatAxisAngle({0,1,0}, layer.cam.yaw / 2.0)
+    yaw_quat: glsl.quat = glsl.quatAxisAngle({0,1,0}, layer.cam.yaw)
     forward := rotate(yaw_quat, {0, 0, 1})
     right: glsl.vec3 = glsl.cross(glsl.vec3 {0, 1, 0}, forward)
 
-    pitch_quat: glsl.quat = glsl.quatAxisAngle(right, layer.cam.pitch / 2.0)
+    pitch_quat: glsl.quat = glsl.quatAxisAngle(right, -layer.cam.pitch)
     cam_rot: glsl.quat = pitch_quat * yaw_quat
-    inverse_cam_rot: glsl.quat = glsl.inverse_quat(cam_rot)
     
     forward = rotate(pitch_quat, forward)
     up: glsl.vec3 = glsl.cross(forward, right)
