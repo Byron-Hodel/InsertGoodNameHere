@@ -12,13 +12,15 @@ uniform mat4 u_inverse_proj;
 
 uniform sampler2D u_color_map;
 uniform sampler2D u_height_map;
+uniform sampler2D u_skybox;
 
-#define MAX_DST 2048.0
+#define MAX_DST 1024.0
 #define MAX_ITERATIONS 1024
 #define GRID_SCALE 1024
 
 // uvs go from 0 to one, so scaling by 1024 should make it about the same as 0 to 1024
 #define HEIGHT_SCALE_FACTOR 128.0
+#define PI 3.14159265
 
 bool in_terrain(vec3 pos) {
     float height = texture(u_height_map, pos.xz).x;
@@ -54,7 +56,11 @@ vec4 ray_march_terrain(vec3 ro, vec3 rd, float grid_scale) {
         intersection_dst += vec3(mask) * step_size;
         grid_pos += ivec3(mask) * step_dir;
     }
-    return col;
+    
+    float theta = acos(rd.y) / PI;
+    float phi = atan(rd.z, rd.x) / -PI * 0.5;
+    return texture(u_skybox, vec2(phi, theta));
+    //return vec4(phi, theta, 0, 1);
 }
 
 void main() {

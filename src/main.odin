@@ -7,8 +7,13 @@ import "allocators"
 import rend "rendering"
 
 general_allocator_data: allocators.General_Allocator_Data
-scene_layer: Scene_Layer
-ui_layer: Ui_Layer
+
+Scene :: union {
+    Terrain_Scene,
+}
+
+@(private="file")
+scene: Scene
 
 main :: proc() {
     // start general allocator with half a gig
@@ -30,45 +35,35 @@ main :: proc() {
         panic("failed to init rendering")
     }
 
-    if !scene_layer_init(&scene_layer) {
-        panic("failed to init scene layer")
-    }
-
-    if !ui_layer_init(&ui_layer) {
-        panic("failed to init scene layer")
+    scene = Terrain_Scene {}
+    if !terrain_scene_init(&scene.(Terrain_Scene)) {
+        panic("failed to init terrain scene")
     }
 }
 
-@(private="file")
-scene_layer_key_states: [Key_Id]Key_State
-
-// the update loop.
-// I would use an infinite loop in the main function,
-// however, that would end terribly
 @export
 step :: proc(delta_time: f32) {
-    for k in Key_Id {
-        if scene_layer_key_states[k] == .Pressed {
-            scene_layer_key_states[k] = .Held
-        }
-    }
     mouse_delta: glsl.vec2
+    scroll_delta: f32
 
     for event_queue_len > 0 {
         event := next_event()
-        handled: bool = ui_layer_on_event(&ui_layer, event)
-        if !handled {
-            #partial switch e in event {
-            case Key_Event:
-                scene_layer_key_states[e.id] = e.new_state
-            case Mouse_Move_Event:
-                mouse_delta[0] += f32(e.delta.x)
-                mouse_delta[1] += f32(e.delta.y)
-            }
+        switch s in scene {
+        case Terrain_Scene:
+            terrain_scene_on_event(&scene.(Terrain_Scene), event)
+        }
+
+        #partial switch e in event {
+        case Mouse_Move_Event:
+            mouse_delta[0] += f32(e.delta.x)
+            mouse_delta[1] += f32(e.delta.y)
+        case Mouse_Wheel_Event:
+            scroll_delta += e.delta.x
         }
     }
-    scene_layer_tick(&scene_layer, scene_layer_key_states, mouse_delta, delta_time)
-    scene_layer_draw(&scene_layer)
-
-    ui_layer_draw(&ui_layer)
+    switch s in scene {
+    case Terrain_Scene:
+        terrain_scene_update(&scene.(Terrain_Scene), delta_time, scroll_delta)
+        terrain_scene_draw(&scene.(Terrain_Scene))
+    }
 }
