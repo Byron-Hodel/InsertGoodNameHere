@@ -1,7 +1,8 @@
 package main
 
 import "vendor:wasm/js"
-import "core:fmt"
+
+// TODO: Fix Mouse Scrolling Delta Not Having Any Value
 
 Key_Id :: enum u8 {
     Unkown,
@@ -44,6 +45,7 @@ Mouse_Button_Id :: enum u8 {
 }
 
 Key_State :: enum u8 {
+    None,
     Released,
     Pressed,
     Held,
@@ -132,7 +134,7 @@ next_event :: proc() -> Event {
 @(private="file")
 on_js_event :: proc(js_event: js.Event) {
     #partial switch js_event.kind {
-    case .Key_Press, .Wheel, .Context_Menu:
+    case .Key_Down, .Key_Up, .Wheel, .Context_Menu:
         js.event_prevent_default()
     }
 
@@ -168,7 +170,7 @@ on_js_event :: proc(js_event: js.Event) {
     }
     case .Wheel:
         event = Mouse_Wheel_Event {
-            delta = { f32(js_event.wheel.delta[0]), f32(js_event.wheel.delta[1]) },
+            delta = { f32(js_event.wheel.delta.x), f32(js_event.wheel.delta.y) },
         }
     case:
         event = nil
