@@ -109,7 +109,7 @@ terrain_scene_init :: proc(scene: ^Terrain_Scene) -> bool {
     
     scene.terrain_cam.pos = glsl.vec3 { 0, 32, 0 }
     scene.terrain_cam.rot = quaternion(1, 0, 0, 0)
-    scene.terrain_cam.speed = 25
+    scene.terrain_cam.speed = 50
     scene.terrain_cam.right = glsl.vec3 { 1, 0, 0 }
     scene.terrain_cam.up = glsl.vec3 { 0, 1, 0 }
     scene.terrain_cam.forward = glsl.vec3 { 0, 0, 1 }
