@@ -99,6 +99,11 @@ class WasmMemoryInterface {
 	storeF64(addr, value)  { this.mem.setFloat64(addr, value, true); }
 	storeInt(addr, value)  { this.mem.setInt32  (addr, value, true); }
 	storeUint(addr, value) { this.mem.setUint32 (addr, value, true); }
+
+	storeString(addr, value) {
+		const bytes = this.loadBytes(addr, value.length);
+		new TextEncoder("utf-8").encodeInto(value, bytes);
+	}
 };
 
 class WebGLInterface {
@@ -1365,121 +1370,78 @@ function odinSetupDefaultImports(wasmMemoryInterface, consoleElement) {
 				let wmi = wasmMemoryInterface;
 
 				let e = event_temp_data.event;
-                let kind_offset = 0 + ep;
-                let target_offset = 4 + ep;
-                let current_target_offset = 8 + ep;
-                let id_offset = 12 + ep;
-                let id_len_offset = 12 + ep + 4;
-                let timestamp_offset = 24 + ep;
-                let phase_offset = 32 + ep;
-                let options_offset = 33 + ep;
-                let is_composing_offset = 34 + ep;
-                let is_trusted_offset = 35 + ep;
 
-                wmi.storeU32(kind_offset, event_temp_data.name_code)
-                if(e.target == document) {
-                    wmi.storeU32(target_offset, 1)
-                }
-                else if(e.target == window) {
-                    wmi.storeU32(target_offset, 2)
-                }
-                else {
-                    wmi.storeU32(target_offset, 0)
-                }
-                if (e.currentTarget == document) {
-					wmi.storeU32(current_target_offset, 1);
-				} else if (e.currentTarget == window) {
-					wmi.storeU32(current_target_offset, 2);
+				wmi.storeU32(off(4), event_temp_data.name_code);
+				if (e.target == document) {
+					wmi.storeU32(off(4), 1);
+				} else if (e.target == window) {
+					wmi.storeU32(off(4), 2);
 				} else {
-					wmi.storeU32(current_target_offset, 0);
+					wmi.storeU32(off(4), 0);
+				}
+				if (e.currentTarget == document) {
+					wmi.storeU32(off(4), 1);
+				} else if (e.currentTarget == window) {
+					wmi.storeU32(off(4), 2);
+				} else {
+					wmi.storeU32(off(4), 0);
 				}
 
-				wmi.storeUint(id_offset, event_temp_data.id_ptr);
-				wmi.storeUint(id_len_offset, event_temp_data.id_len);
+				wmi.storeUint(off(W), event_temp_data.id_ptr);
+				wmi.storeUint(off(W), event_temp_data.id_len);
+				wmi.storeUint(off(W), 0); // padding
 
-				wmi.storeF64(timestamp_offset, e.timeStamp*1e-3);
+				wmi.storeF64(off(8), e.timeStamp*1e-3);
 
-				wmi.storeU8(phase_offset, e.eventPhase);
+				wmi.storeU8(off(1), e.eventPhase);
 				let options = 0;
 				if (!!e.bubbles)    { options |= 1<<0; }
 				if (!!e.cancelable) { options |= 1<<1; }
 				if (!!e.composed)   { options |= 1<<2; }
-				wmi.storeU8(options_offset, options);
-				wmi.storeU8(is_composing_offset, !!e.isComposing);
-				wmi.storeU8(is_trusted_offset, !!e.isTrusted);
+				wmi.storeU8(off(1), options);
+				wmi.storeU8(off(1), !!e.isComposing);
+				wmi.storeU8(off(1), !!e.isTrusted);
 
+				let base = off(0, 8);
 				if (e instanceof MouseEvent) {
-                    let screen_x_offset = 40 + ep;
-                    let screen_y_offset = 48 + ep;
-                    let client_x_offset = 56 + ep;
-                    let client_y_offset = 64 + ep;
-                    let offset_x_offset = 72 + ep;
-                    let offset_y_offset = 80 + ep;
-                    let page_x_offset = 88 + ep;
-                    let page_y_offset = 96 + ep;
-                    let movement_x_offset = 104 + ep;
-                    let movement_y_offset = 112 + ep;
-                    let ctrl_offset = 120 + ep;
-                    let shift_offset = 121 + ep;
-                    let alt_offset = 122 + ep;
-                    let meta_offset = 123 + ep;
-                    let btn_offset = 124 + ep;
-                    let btns_offset = 126 + ep;
-					wmi.storeI64(screen_x_offset, e.screenX);
-					wmi.storeI64(screen_y_offset, e.screenY);
-					wmi.storeI64(client_x_offset, e.clientX);
-					wmi.storeI64(client_y_offset, e.clientY);
-					wmi.storeI64(offset_x_offset, e.offsetX);
-					wmi.storeI64(offset_y_offset, e.offsetY);
-					wmi.storeI64(page_x_offset, e.pageX);
-					wmi.storeI64(page_y_offset, e.pageY);
-					wmi.storeI64(movement_x_offset, e.movementX);
-					wmi.storeI64(movement_y_offset, e.movementY);
+					wmi.storeI64(off(8), e.screenX);
+					wmi.storeI64(off(8), e.screenY);
+					wmi.storeI64(off(8), e.clientX);
+					wmi.storeI64(off(8), e.clientY);
+					wmi.storeI64(off(8), e.offsetX);
+					wmi.storeI64(off(8), e.offsetY);
+					wmi.storeI64(off(8), e.pageX);
+					wmi.storeI64(off(8), e.pageY);
+					wmi.storeI64(off(8), e.movementX);
+					wmi.storeI64(off(8), e.movementY);
 
-					wmi.storeU8(ctrl_offset, !!e.ctrlKey);
-					wmi.storeU8(shift_offset, !!e.shiftKey);
-					wmi.storeU8(alt_offset, !!e.altKey);
-					wmi.storeU8(meta_offset, !!e.metaKey);
+					wmi.storeU8(off(1), !!e.ctrlKey);
+					wmi.storeU8(off(1), !!e.shiftKey);
+					wmi.storeU8(off(1), !!e.altKey);
+					wmi.storeU8(off(1), !!e.metaKey);
 
-					wmi.storeI16(btn_offset, e.button);
-					wmi.storeU16(btns_offset, e.buttons);
+					wmi.storeI16(off(2), e.button);
+					wmi.storeU16(off(2), e.buttons);
 				} else if (e instanceof KeyboardEvent) {
-                    let key_offset = 40 + ep;
-                    let key_len_offset = 44 + ep;
-                    let code_offset = 48 + ep;
-                    let code_len_offset = 52 + ep;
-                    let location_offset = 56 + ep;
-                    let ctrl_offset = 57 + ep;
-                    let shift_offset = 58 + ep;
-                    let alt_offset = 59 + ep;
-                    let meta_offset = 60 + ep;
-                    let repeat_offset = 61 + ep;
-                    let key_buff_offset = 62 + ep;
-                    let code_buff_offset = 78 + ep;
-                    wmi.storeU8(location_offset, e.location);
+					// Note: those strigs are constructed
+					// on the native side from buffers that
+					// are filled later, so skip them 
+					const keyPtr  = off(W*2, W);
+					const codePtr = off(W*2, W);
 
-                    wmi.storeU8(ctrl_offset, !!e.ctrlKey);
-                    wmi.storeU8(shift_offset, !!e.shiftKey);
-                    wmi.storeU8(alt_offset, !!e.altKey);
-                    wmi.storeU8(meta_offset, !!e.metaKey);
-                    wmi.storeU8(repeat_offset, !!e.repeat);
+					wmi.storeU8(off(1), e.location);
 
-                    let key = new TextEncoder("utf-8").encode(e.key);
-					let code = new TextEncoder("utf-8").encode(e.code);
-                    
-                    const KEYBOARD_MAX_KEY_SIZE = 16;
-                    const KEYBOARD_MAX_CODE_SIZE = 16;
+					wmi.storeU8(off(1), !!e.ctrlKey);
+					wmi.storeU8(off(1), !!e.shiftKey);
+					wmi.storeU8(off(1), !!e.altKey);
+					wmi.storeU8(off(1), !!e.metaKey);
 
-                    var key_buff = wmi.loadBytes(key_buff_offset, KEYBOARD_MAX_KEY_SIZE);
-                    var code_buff = wmi.loadBytes(code_buff_offset, KEYBOARD_MAX_CODE_SIZE);
-                    key_buff.set(key);
-                    code_buff.set(code);
+					wmi.storeU8(off(1), !!e.repeat);
 
-                    wmi.storeUint(key_offset, key_buff_offset);
-                    wmi.storeUint(key_len_offset, e.key.length);
-                    
-                    wmi.storeUint(code_offset, code_buff_offset);
-                    wmi.storeUint(code_len_offset, e.code.length);
+					wmi.storeI32(off(W), e.key.length)
+					wmi.storeI32(off(W), e.code.length)
+					wmi.storeString(off(16, 1), e.key);
+					wmi.storeString(off(16, 1), e.code);
 				} else if (e instanceof WheelEvent) {
 					wmi.storeF64(off(8), e.deltaX);
 					wmi.storeF64(off(8), e.deltaY);
